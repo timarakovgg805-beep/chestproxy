@@ -88,14 +88,14 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         }
 
         if (!doTransfer) {
-            return validateItems(player, chests, inputs, maxTransfer);
+            return validateItems(player, chests, inputs, maxTransfer, expectedOutput);
         }
 
         return performTransfer(container, player, world, server, chests, inputs, expectedOutput, isRemote, maxTransfer);
     }
 
     @Nullable
-    private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs, boolean maxTransfer) {
+    private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs, boolean maxTransfer, ItemStack expectedOutput) {
         int maxCrafts = maxTransfer ? Integer.MAX_VALUE : 1;
         List<Integer> missingSlots = new ArrayList<>();
         // Group per item type for per-type validation
@@ -134,6 +134,19 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                     int possible = arr[1] / arr[0];
                     if (possible < maxCrafts) maxCrafts = possible;
                 }
+            }
+            // Cap by grid slot stack size (max 64 per slot)
+            for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                ItemStack needed = inputs.get(i);
+                if (needed.isEmpty()) continue;
+                int slotCap = 64 / needed.getCount();
+                if (slotCap < maxCrafts) maxCrafts = slotCap;
+            }
+            // Cap by result stack size
+            if (!expectedOutput.isEmpty()) {
+                int perCraft = Math.max(1, expectedOutput.getCount());
+                int resultCap = expectedOutput.getMaxStackSize() / perCraft;
+                if (resultCap < maxCrafts) maxCrafts = resultCap;
             }
         }
         if (maxTransfer && maxCrafts > 0 && maxCrafts < Integer.MAX_VALUE) {
@@ -175,6 +188,19 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                     int possible = arr[1] / arr[0];
                     if (possible < times) times = possible;
                 }
+            }
+            // Cap by grid slot stack size (max 64 per slot)
+            for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                ItemStack needed = inputs.get(i);
+                if (needed.isEmpty()) continue;
+                int slotCap = 64 / needed.getCount();
+                if (slotCap < times) times = slotCap;
+            }
+            // Cap by result stack size
+            if (!expectedOutput.isEmpty()) {
+                int perCraft = Math.max(1, expectedOutput.getCount());
+                int resultCap = expectedOutput.getMaxStackSize() / perCraft;
+                if (resultCap < times) times = resultCap;
             }
             ChestProxyMod.LOG.info("Max transfer: crafting {}x", times);
         }
