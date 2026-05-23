@@ -21,6 +21,7 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -42,10 +43,6 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
     @Override
     public IRecipeTransferError transferRecipe(ContainerWorkbench container, IRecipeLayout recipeLayout, EntityPlayer player, boolean maxTransfer, boolean doTransfer) {
         ChestProxyMod.LOG.info(">>> transferRecipe called doTransfer={} enabled={}", doTransfer, ChestProxyConfig.isEnabled());
-
-        if (!ChestProxyConfig.isEnabled()) {
-            return null;
-        }
 
         Map<Integer, ? extends IGuiIngredient<ItemStack>> guiIngredients = recipeLayout.getItemStacks().getGuiIngredients();
 
@@ -82,7 +79,12 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             }
         }
 
-        List<IInventory> chests = ChestHelper.findNearbyInventories(world, player.getPosition());
+        List<IInventory> chests;
+        if (ChestProxyConfig.isEnabled()) {
+            chests = ChestHelper.findNearbyInventories(world, player.getPosition());
+        } else {
+            chests = Collections.emptyList();
+        }
 
         if (!doTransfer) {
             return validateItems(player, chests, inputs);
@@ -106,7 +108,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
 
             if (total < needed.getCount()) {
                 ChestProxyMod.LOG.info("  => Slot {} MISSING (need {} have {})", i, needed.getCount(), total);
-                return helper.createUserErrorForSlots("Missing items for slot " + (i + 1), java.util.Collections.singletonList(i));
+                return helper.createUserErrorForSlots("Missing items for slot " + (i + 1), java.util.Collections.singletonList(i + 1));
             }
         }
         ChestProxyMod.LOG.info("  All items available");
