@@ -142,12 +142,6 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 int slotCap = 64 / needed.getCount();
                 if (slotCap < maxCrafts) maxCrafts = slotCap;
             }
-            // Cap by result stack size
-            if (!expectedOutput.isEmpty()) {
-                int perCraft = Math.max(1, expectedOutput.getCount());
-                int resultCap = expectedOutput.getMaxStackSize() / perCraft;
-                if (resultCap < maxCrafts) maxCrafts = resultCap;
-            }
         }
         if (maxTransfer && maxCrafts > 0 && maxCrafts < Integer.MAX_VALUE) {
             ChestProxyMod.info("  Can craft {}x", maxCrafts);
@@ -195,12 +189,6 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 if (needed.isEmpty()) continue;
                 int slotCap = 64 / needed.getCount();
                 if (slotCap < times) times = slotCap;
-            }
-            // Cap by result stack size
-            if (!expectedOutput.isEmpty()) {
-                int perCraft = Math.max(1, expectedOutput.getCount());
-                int resultCap = expectedOutput.getMaxStackSize() / perCraft;
-                if (resultCap < times) times = resultCap;
             }
             ChestProxyMod.info("Max transfer: crafting {}x", times);
         }
