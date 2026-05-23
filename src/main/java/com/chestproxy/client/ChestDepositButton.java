@@ -6,15 +6,15 @@ import com.chestproxy.util.ChestHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
-import net.minecraft.inventory.ContainerWorkbench;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -32,10 +32,10 @@ public class ChestDepositButton {
 
     @SubscribeEvent
     public void onInitGui(GuiScreenEvent.InitGuiEvent.Post event) {
-        if (event.getGui() instanceof GuiContainer && ((GuiContainer) event.getGui()).inventorySlots instanceof ContainerWorkbench) {
+        if (event.getGui() instanceof GuiInventory) {
             GuiContainer gui = (GuiContainer) event.getGui();
-            int x = gui.getGuiLeft() + 152;
-            int y = gui.getGuiTop() + 16;
+            int x = gui.getGuiLeft() + gui.getXSize() - 18;
+            int y = gui.getGuiTop() + gui.getYSize() + 2;
             event.getButtonList().add(new GuiButton(BUTTON_ID, x, y, 18, 18, "") {
                 @Override
                 public void drawButton(Minecraft mc, int mouseX, int mouseY, float partialTicks) {
@@ -62,15 +62,17 @@ public class ChestDepositButton {
         }
     }
 
-    private void depositToChests() {
+    public static void depositToChests() {
         EntityPlayer player = Minecraft.getMinecraft().player;
         if (player == null) return;
 
         World world = player.world;
+        EntityPlayerMP serverPlayer = null;
         if (world.isRemote) {
             MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
             if (server != null) {
                 world = server.getWorld(player.dimension);
+                serverPlayer = server.getPlayerList().getPlayerByUUID(player.getUniqueID());
             }
         }
 
@@ -80,6 +82,19 @@ public class ChestDepositButton {
         for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
             ItemStack stack = player.inventory.getStackInSlot(i);
             if (stack.isEmpty()) continue;
+
+            boolean typeExists = false;
+            for (IInventory chest : chests) {
+                for (int j = 0; j < chest.getSizeInventory(); j++) {
+                    ItemStack chestStack = chest.getStackInSlot(j);
+                    if (!chestStack.isEmpty() && ChestHelper.canMerge(chestStack, stack)) {
+                        typeExists = true;
+                        break;
+                    }
+                }
+                if (typeExists) break;
+            }
+            if (!typeExists) continue;
 
             int remaining = stack.getCount();
 
@@ -116,15 +131,28 @@ public class ChestDepositButton {
                 }
             }
 
-            if (remaining <= 0) {
-                player.inventory.setInventorySlotContents(i, ItemStack.EMPTY);
-            } else {
-                stack.setCount(remaining);
-                player.inventory.setInventorySlotContents(i, stack);
+            if (remaining < stack.getCount()) {
+                ItemStack newStack;
+                if (remaining <= 0) {
+                    newStack = ItemStack.EMPTY;
+                } else {
+                    stack.setCount(remaining);
+                    newStack = stack;
+                }
+                player.inventory.setInventorySlotContents(i, newStack);
+                if (serverPlayer != null) {
+                    serverPlayer.inventory.setInventorySlotContents(i, newStack.copy());
+                }
             }
         }
 
         player.inventory.markDirty();
+        if (serverPlayer != null) {
+            serverPlayer.inventory.markDirty();
+            if (serverPlayer.openContainer != null) {
+                serverPlayer.openContainer.detectAndSendChanges();
+            }
+        }
         ChestProxyMod.info("Deposit complete");
     }
 }

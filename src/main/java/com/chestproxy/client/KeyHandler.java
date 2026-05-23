@@ -18,16 +18,24 @@ public class KeyHandler {
         "key.categories.chestproxy"
     );
 
-    private static boolean wasDown = false;
+    public static final KeyBinding DEPOSIT_KEY = new KeyBinding(
+        "key.chestproxy.deposit",
+        Keyboard.KEY_NONE,
+        "key.categories.chestproxy"
+    );
+
+    private static boolean toggleWasDown = false;
+    private static boolean depositWasDown = false;
 
     public static void register() {
         ClientRegistry.registerKeyBinding(TOGGLE_KEY);
+        ClientRegistry.registerKeyBinding(DEPOSIT_KEY);
     }
 
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
-        boolean down = TOGGLE_KEY.isKeyDown();
-        if (down && !wasDown) {
+        boolean toggleDown = TOGGLE_KEY.isKeyDown();
+        if (toggleDown && !toggleWasDown) {
             boolean enabled = ChestProxyConfig.toggle();
             if (Minecraft.getMinecraft().player != null) {
                 String status = (enabled ? TextFormatting.GREEN : TextFormatting.RED) + (enabled ? "ON" : "OFF");
@@ -36,6 +44,12 @@ public class KeyHandler {
                 );
             }
         }
-        wasDown = down;
+        toggleWasDown = toggleDown;
+
+        boolean depositDown = DEPOSIT_KEY.isKeyDown();
+        if (depositDown && !depositWasDown) {
+            ChestDepositButton.depositToChests();
+        }
+        depositWasDown = depositDown;
     }
 }

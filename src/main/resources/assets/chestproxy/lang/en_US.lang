@@ -1,4 +1,5 @@
 key.chestproxy.toggle=Toggle ChestProxy
+key.chestproxy.deposit=Deposit to chests
 key.categories.chestproxy=ChestProxy
 
 chestproxy.config.title=ChestProxy Config

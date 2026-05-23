@@ -1,4 +1,5 @@
 key.chestproxy.toggle=Клавиша вкл/выкл ChestProxy
+key.chestproxy.deposit=Сброс в сундуки
 key.categories.chestproxy=ChestProxy
 
 chestproxy.config.title=Настройки ChestProxy
