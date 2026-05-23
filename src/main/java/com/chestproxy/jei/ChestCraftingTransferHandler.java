@@ -95,6 +95,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
 
     @Nullable
     private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs) {
+        List<Integer> missingSlots = new ArrayList<>();
         for (int i = 0; i < CRAFTING_SLOTS; i++) {
             ItemStack needed = inputs.get(i);
             if (needed.isEmpty()) continue;
@@ -108,8 +109,11 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
 
             if (total < needed.getCount()) {
                 ChestProxyMod.LOG.info("  => Slot {} MISSING (need {} have {})", i, needed.getCount(), total);
-                return helper.createUserErrorForSlots("Missing items for slot " + (i + 1), java.util.Collections.singletonList(i + 1));
+                missingSlots.add(i + 1);
             }
+        }
+        if (!missingSlots.isEmpty()) {
+            return helper.createUserErrorForSlots("Missing items", missingSlots);
         }
         ChestProxyMod.LOG.info("  All items available");
         return null;
