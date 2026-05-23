@@ -45,6 +45,12 @@ public class ChestHelper {
                     return true;
                 }
             }
+            // For damageable items (tools, armour), treat different damage as same type
+            if (a.isItemStackDamageable()) {
+                if (a.areCapsCompatible(b) && ItemStack.areItemStackTagsEqual(a, b)) {
+                    return true;
+                }
+            }
         }
 
         int[] idsA = OreDictionary.getOreIDs(a);
