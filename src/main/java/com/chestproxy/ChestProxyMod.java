@@ -1,5 +1,6 @@
 package com.chestproxy;
 
+import com.chestproxy.client.ChestDepositButton;
 import com.chestproxy.client.KeyHandler;
 import com.chestproxy.config.ChestProxyConfig;
 import net.minecraftforge.common.MinecraftForge;
@@ -40,5 +41,6 @@ public class ChestProxyMod {
     @SideOnly(Side.CLIENT)
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(new KeyHandler());
+        MinecraftForge.EVENT_BUS.register(new ChestDepositButton());
     }
 }
