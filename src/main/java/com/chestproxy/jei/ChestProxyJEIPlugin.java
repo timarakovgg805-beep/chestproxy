@@ -15,7 +15,7 @@ public class ChestProxyJEIPlugin implements IModPlugin {
 
     @Override
     public void register(IModRegistry registry) {
-        ChestProxyMod.LOG.info("ChestProxy JEI plugin register() called");
+        ChestProxyMod.info("ChestProxy JEI plugin register() called");
         IJeiHelpers jeiHelpers = registry.getJeiHelpers();
         IRecipeTransferHandlerHelper transferHelper = jeiHelpers.recipeTransferHandlerHelper();
 
@@ -23,11 +23,11 @@ public class ChestProxyJEIPlugin implements IModPlugin {
             new ChestCraftingTransferHandler(transferHelper),
             VanillaRecipeCategoryUid.CRAFTING
         );
-        ChestProxyMod.LOG.info("ChestCraftingTransferHandler registered for ContainerWorkbench + CRAFTING");
+        ChestProxyMod.info("ChestCraftingTransferHandler registered for ContainerWorkbench + CRAFTING");
     }
 
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
-        ChestProxyMod.LOG.info("ChestProxy JEI onRuntimeAvailable()");
+        ChestProxyMod.info("ChestProxy JEI onRuntimeAvailable()");
     }
 }

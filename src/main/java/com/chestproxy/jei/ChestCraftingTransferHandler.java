@@ -43,7 +43,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
     @Nullable
     @Override
     public IRecipeTransferError transferRecipe(ContainerWorkbench container, IRecipeLayout recipeLayout, EntityPlayer player, boolean maxTransfer, boolean doTransfer) {
-        ChestProxyMod.LOG.info(">>> transferRecipe called doTransfer={} enabled={}", doTransfer, ChestProxyConfig.isEnabled());
+        ChestProxyMod.info(">>> transferRecipe called doTransfer={} enabled={}", doTransfer, ChestProxyConfig.isEnabled());
 
         Map<Integer, ? extends IGuiIngredient<ItemStack>> guiIngredients = recipeLayout.getItemStacks().getGuiIngredients();
 
@@ -54,7 +54,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         } else if (outputIng != null && outputIng.getAllIngredients() != null && !outputIng.getAllIngredients().isEmpty()) {
             expectedOutput = outputIng.getAllIngredients().get(0).copy();
         }
-        ChestProxyMod.LOG.info("Expected output: {}", expectedOutput);
+        ChestProxyMod.info("Expected output: {}", expectedOutput);
 
         List<ItemStack> inputs = new ArrayList<>(CRAFTING_SLOTS);
         for (int i = 0; i < CRAFTING_SLOTS; i++) {
@@ -64,7 +64,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             } else {
                 ItemStack ingStack = ing.getAllIngredients().get(0).copy();
                 inputs.add(ingStack);
-                ChestProxyMod.LOG.debug("  JEI input slot {}: {}", i, ingStack);
+                ChestProxyMod.debug("  JEI input slot {}: {}", i, ingStack);
             }
         }
 
@@ -76,7 +76,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             if (server != null) {
                 world = server.getWorld(player.dimension);
             } else {
-                ChestProxyMod.LOG.warn("Server world not available, using client world");
+                ChestProxyMod.warn("Server world not available, using client world");
             }
         }
 
@@ -109,7 +109,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             int total = inInv + inChests;
             int possible = total / needed.getCount();
 
-            ChestProxyMod.LOG.info("  Slot {} need {}x {} (inv={} chests={} total={} possible={})",
+            ChestProxyMod.info("  Slot {} need {}x {} (inv={} chests={} total={} possible={})",
                 i, needed.getCount(), needed, inInv, inChests, total, possible);
 
             if (possible < maxCrafts) {
@@ -150,12 +150,12 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             }
         }
         if (maxTransfer && maxCrafts > 0 && maxCrafts < Integer.MAX_VALUE) {
-            ChestProxyMod.LOG.info("  Can craft {}x", maxCrafts);
+            ChestProxyMod.info("  Can craft {}x", maxCrafts);
         }
         if (!missingSlots.isEmpty()) {
             return helper.createUserErrorForSlots("Missing items", missingSlots);
         }
-        ChestProxyMod.LOG.info("  All items available");
+        ChestProxyMod.info("  All items available");
         return null;
     }
 
@@ -202,7 +202,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 int resultCap = expectedOutput.getMaxStackSize() / perCraft;
                 if (resultCap < times) times = resultCap;
             }
-            ChestProxyMod.LOG.info("Max transfer: crafting {}x", times);
+            ChestProxyMod.info("Max transfer: crafting {}x", times);
         }
 
         // Phase 1: Extract total needed items from inventory + chests (one pass per item type)
@@ -234,7 +234,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             }
             if (template == null) continue;
 
-            ChestProxyMod.LOG.info("Extracting {}x {} for all slots combined", needTotal, itemName);
+            ChestProxyMod.info("Extracting {}x {} for all slots combined", needTotal, itemName);
             int remaining = needTotal;
 
             for (int j = 0; j < player.inventory.getSizeInventory(); j++) {
@@ -264,7 +264,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             ItemStack gridStack = needed.copy();
             gridStack.setCount(gridCount);
             container.craftMatrix.setInventorySlotContents(i, gridStack);
-            ChestProxyMod.LOG.info("Slot {}: grid {}x", i, gridCount);
+            ChestProxyMod.info("Slot {}: grid {}x", i, gridCount);
         }
 
         ItemStack result = CraftingManager.findMatchingResult(container.craftMatrix, world);
@@ -281,7 +281,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         if (isRemote && server != null) {
             try {
                 EntityPlayerMP serverPlayer = server.getPlayerList().getPlayerByUUID(player.getUniqueID());
-                ChestProxyMod.LOG.info("  serverPlayer={}", serverPlayer);
+                ChestProxyMod.info("  serverPlayer={}", serverPlayer);
                 if (serverPlayer != null) {
                     if (serverPlayer.openContainer instanceof ContainerWorkbench) {
                         ContainerWorkbench sc = (ContainerWorkbench) serverPlayer.openContainer;
@@ -334,39 +334,39 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                             serverExtract.get(key)[0] = 0; // Mark as done
                         }
                         sc.detectAndSendChanges();
-                        ChestProxyMod.LOG.info("  Server container synced OK");
+                        ChestProxyMod.info("  Server container synced OK");
                     } else {
-                        ChestProxyMod.LOG.warn("  Server openContainer not ContainerWorkbench: {}", serverPlayer.openContainer);
+                        ChestProxyMod.warn("  Server openContainer not ContainerWorkbench: {}", serverPlayer.openContainer);
                     }
                 }
             } catch (Throwable e) {
-                ChestProxyMod.LOG.error("  Server sync error: {}", e.toString());
+                ChestProxyMod.error("  Server sync error: {}", e.toString());
             }
         }
 
         // Debug dump
-        ChestProxyMod.LOG.info("=== Craft Matrix Dump ===");
+        ChestProxyMod.info("=== Craft Matrix Dump ===");
         for (int r = 0; r < 3; r++) {
             StringBuilder row = new StringBuilder("  Row " + r + ": ");
             for (int c = 0; c < 3; c++) {
                 ItemStack s = container.craftMatrix.getStackInRowAndColumn(r, c);
                 row.append("[").append(s.isEmpty() ? "EMPTY" : s.toString()).append("] ");
             }
-            ChestProxyMod.LOG.info(row.toString());
+            ChestProxyMod.info(row.toString());
         }
 
         ItemStack matchedResult = CraftingManager.findMatchingResult(container.craftMatrix, world);
-        ChestProxyMod.LOG.info("Recipe match: {} | JEI: {}", matchedResult, expectedOutput);
+        ChestProxyMod.info("Recipe match: {} | JEI: {}", matchedResult, expectedOutput);
 
         int matchCount = 0;
         for (IRecipe recipe : CraftingManager.REGISTRY) {
             if (recipe.matches(container.craftMatrix, world)) {
                 matchCount++;
-                ChestProxyMod.LOG.info("  Match #{}: {} -> {}", matchCount,
+                ChestProxyMod.info("  Match #{}: {} -> {}", matchCount,
                     recipe.getRecipeOutput(), recipe.getRegistryName());
             }
         }
-        ChestProxyMod.LOG.info("Total matches: {}", matchCount);
+        ChestProxyMod.info("Total matches: {}", matchCount);
 
         return null;
     }

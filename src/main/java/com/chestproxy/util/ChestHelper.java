@@ -32,7 +32,7 @@ public class ChestHelper {
             }
         }
 
-        ChestProxyMod.LOG.info("Found {} inventories near {}", inventories.size(), pos);
+        ChestProxyMod.info("Found {} inventories near {}", inventories.size(), pos);
         return inventories;
     }
 

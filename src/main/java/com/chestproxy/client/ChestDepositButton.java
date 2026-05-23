@@ -75,7 +75,7 @@ public class ChestDepositButton {
         }
 
         List<IInventory> chests = ChestHelper.findNearbyInventories(world, player.getPosition());
-        ChestProxyMod.LOG.info("Deposit button: found {} chests", chests.size());
+        ChestProxyMod.info("Deposit button: found {} chests", chests.size());
 
         for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
             ItemStack stack = player.inventory.getStackInSlot(i);
@@ -125,6 +125,6 @@ public class ChestDepositButton {
         }
 
         player.inventory.markDirty();
-        ChestProxyMod.LOG.info("Deposit complete");
+        ChestProxyMod.info("Deposit complete");
     }
 }

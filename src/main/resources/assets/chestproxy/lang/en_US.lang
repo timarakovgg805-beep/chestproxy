@@ -1,2 +1,10 @@
 key.chestproxy.toggle=Toggle ChestProxy
 key.categories.chestproxy=ChestProxy
+
+chestproxy.config.title=ChestProxy Config
+chestproxy.config.enabled=Enable ChestProxy
+chestproxy.config.enabled.tooltip=Enable or disable crafting from nearby chests
+chestproxy.config.radius=Search Radius
+chestproxy.config.radius.tooltip=Radius in blocks to search for nearby inventories
+chestproxy.config.logging=Enable Logging
+chestproxy.config.logging.tooltip=Enable debug logging to the console

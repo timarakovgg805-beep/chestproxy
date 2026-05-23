@@ -1,30 +1,31 @@
 package com.chestproxy.config;
 
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.chestproxy.ChestProxyMod;
+import net.minecraftforge.common.config.Config;
+import net.minecraftforge.common.config.ConfigManager;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+@Config(modid = ChestProxyMod.MOD_ID, name = "chestproxy")
+@Config.LangKey("chestproxy.config.title")
 public class ChestProxyConfig {
 
-    private static final Logger LOG = LogManager.getLogger("ChestProxy");
+    @Config.Name("Enabled")
+    @Config.Comment("Enable or disable ChestProxy crafting from chests")
+    @Config.LangKey("chestproxy.config.enabled")
+    public static boolean enabled = true;
 
-    private static boolean enabled = true;
-    private static int searchRadius = 7;
+    @Config.Name("SearchRadius")
+    @Config.Comment("Radius in blocks to search for nearby inventories")
+    @Config.LangKey("chestproxy.config.radius")
+    @Config.RangeInt(min = 1, max = 32)
+    public static int searchRadius = 7;
 
-    public static void load(FMLPreInitializationEvent event) {
-        Configuration config = new Configuration(event.getSuggestedConfigurationFile());
-        try {
-            config.load();
-            enabled = config.getBoolean("Enabled", "general", true, "Enable or disable ChestProxy crafting from chests");
-            searchRadius = config.getInt("SearchRadius", "general", 7, 1, 32, "Radius in blocks to search for nearby inventories");
-        } catch (Exception e) {
-            LOG.error("Failed to load config", e);
-        } finally {
-            config.save();
-        }
-        LOG.info("ChestProxy config loaded: enabled={}, radius={}", enabled, searchRadius);
-    }
+    @Config.Name("LoggingEnabled")
+    @Config.Comment("Enable debug logging")
+    @Config.LangKey("chestproxy.config.logging")
+    public static boolean loggingEnabled = false;
 
     public static boolean isEnabled() {
         return enabled;
@@ -32,16 +33,28 @@ public class ChestProxyConfig {
 
     public static void setEnabled(boolean value) {
         enabled = value;
-        LOG.info("ChestProxy toggled {}", value ? "ON" : "OFF");
     }
 
     public static boolean toggle() {
         enabled = !enabled;
-        LOG.info("ChestProxy toggled {}", enabled ? "ON" : "OFF");
         return enabled;
     }
 
     public static int getSearchRadius() {
         return searchRadius;
+    }
+
+    public static boolean isLoggingEnabled() {
+        return loggingEnabled;
+    }
+
+    @Mod.EventBusSubscriber(modid = ChestProxyMod.MOD_ID)
+    private static class EventHandler {
+        @SubscribeEvent
+        public static void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
+            if (event.getModID().equals(ChestProxyMod.MOD_ID)) {
+                ConfigManager.sync(ChestProxyMod.MOD_ID, Config.Type.INSTANCE);
+            }
+        }
     }
 }

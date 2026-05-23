@@ -25,7 +25,27 @@ public class ChestProxyMod {
     public static final String MOD_ID = "chestproxy";
     public static final String MOD_NAME = "ChestProxy";
     public static final String VERSION = Tags.VERSION;
-    public static final Logger LOG = LogManager.getLogger(MOD_ID);
+    private static final Logger LOG = LogManager.getLogger(MOD_ID);
+
+    public static void info(String msg, Object... args) {
+        if (ChestProxyConfig.isLoggingEnabled()) {
+            LOG.info(msg, args);
+        }
+    }
+
+    public static void debug(String msg, Object... args) {
+        if (ChestProxyConfig.isLoggingEnabled()) {
+            LOG.debug(msg, args);
+        }
+    }
+
+    public static void warn(String msg, Object... args) {
+        LOG.warn(msg, args);
+    }
+
+    public static void error(String msg, Object... args) {
+        LOG.error(msg, args);
+    }
 
     @Mod.Instance(MOD_ID)
     public static ChestProxyMod instance;
@@ -33,7 +53,6 @@ public class ChestProxyMod {
     @Mod.EventHandler
     @SideOnly(Side.CLIENT)
     public void preInit(FMLPreInitializationEvent event) {
-        ChestProxyConfig.load(event);
         KeyHandler.register();
     }
 
