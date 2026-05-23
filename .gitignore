@@ -1,0 +1,14 @@
+build/
+.gradle/
+run/
+*.jar
+jdk8/
+mezz/
+*.ps1
+*.bat
+!gradlew.bat
+!gradlew
+out/
+.idea/
+*.iml
+*.zip

@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "chestproxy",
+    "name": "ChestProxy",
+    "description": "Craft from nearby chests - Terraria-style crafting for Minecraft",
+    "version": "${version}",
+    "mcversion": "${minecraftVersion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": [
+      "jei"
+    ]
+  }
+]
