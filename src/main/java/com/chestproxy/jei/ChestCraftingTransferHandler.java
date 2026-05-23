@@ -98,6 +98,8 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
     private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs, boolean maxTransfer) {
         int maxCrafts = maxTransfer ? Integer.MAX_VALUE : 1;
         List<Integer> missingSlots = new ArrayList<>();
+        // Group per item type for per-type validation
+        Map<String, int[]> itemNeeded = new HashMap<>();
         for (int i = 0; i < CRAFTING_SLOTS; i++) {
             ItemStack needed = inputs.get(i);
             if (needed.isEmpty()) continue;
@@ -115,6 +117,23 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             }
             if (total < needed.getCount()) {
                 missingSlots.add(i + 1);
+            }
+            // Group by item type for per-type maxCrafts
+            String key = needed.getItem().getRegistryName() + "@" + needed.getItemDamage();
+            int[] arr = itemNeeded.get(key);
+            if (arr == null) {
+                arr = new int[]{0, (inInv + inChests)};
+                itemNeeded.put(key, arr);
+            }
+            arr[0] += needed.getCount();
+        }
+        // Recalculate based on total per item type
+        if (maxTransfer) {
+            for (int[] arr : itemNeeded.values()) {
+                if (arr[0] > 0) {
+                    int possible = arr[1] / arr[0];
+                    if (possible < maxCrafts) maxCrafts = possible;
+                }
             }
         }
         if (maxTransfer && maxCrafts > 0 && maxCrafts < Integer.MAX_VALUE) {
