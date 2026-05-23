@@ -22,6 +22,7 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -131,6 +132,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         // Calculate max crafts if shift is held
         int times = 1;
         if (maxTransfer) {
+            Map<String, int[]> itemNeeded = new HashMap<>();
             times = Integer.MAX_VALUE;
             for (int i = 0; i < CRAFTING_SLOTS; i++) {
                 ItemStack needed = inputs.get(i);
@@ -139,31 +141,61 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 int inChests = ChestHelper.countInChests(chests, needed);
                 int possible = (inInv + inChests) / needed.getCount();
                 if (possible < times) times = possible;
+                // Group by item type for total extraction
+                String key = needed.getItem().getRegistryName() + "@" + needed.getItemDamage();
+                int[] arr = itemNeeded.get(key);
+                if (arr == null) {
+                    arr = new int[]{0, (inInv + inChests)};
+                    itemNeeded.put(key, arr);
+                }
+                arr[0] += needed.getCount();
+            }
+            // Recalculate based on total per item type
+            for (int[] arr : itemNeeded.values()) {
+                if (arr[0] > 0) {
+                    int possible = arr[1] / arr[0];
+                    if (possible < times) times = possible;
+                }
             }
             ChestProxyMod.LOG.info("Max transfer: crafting {}x", times);
         }
 
-        // Fill client crafting grid
-        for (int s = 0; s < CRAFTING_SLOTS; s++) {
-            container.craftMatrix.setInventorySlotContents(s, ItemStack.EMPTY);
-        }
-
+        // Phase 1: Extract total needed items from inventory + chests (one pass per item type)
+        Map<String, int[]> extractMap = new HashMap<>();
         for (int i = 0; i < CRAFTING_SLOTS; i++) {
             ItemStack needed = inputs.get(i);
             if (needed.isEmpty()) continue;
-
             int needTotal = needed.getCount() * times;
-            int gridCount = Math.min(needTotal, 64);
+            String key = needed.getItem().getRegistryName() + "@" + needed.getItemDamage();
+            int[] arr = extractMap.get(key);
+            if (arr == null) {
+                arr = new int[]{0, 0, needed.getItemDamage()};
+                extractMap.put(key, arr);
+            }
+            arr[0] += needTotal;
+        }
+        for (Map.Entry<String, int[]> entry : extractMap.entrySet()) {
+            int needTotal = entry.getValue()[0];
+            if (needTotal <= 0) continue;
+            String itemName = entry.getKey();
+            // Find a matching needed stack for this item type
+            ItemStack template = null;
+            for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                ItemStack n = inputs.get(i);
+                if (!n.isEmpty() && (n.getItem().getRegistryName() + "@" + n.getItemDamage()).equals(itemName)) {
+                    template = n;
+                    break;
+                }
+            }
+            if (template == null) continue;
 
-            ChestProxyMod.LOG.info("Slot {}: need {}x {} ({}x{}) grid={}", i, needTotal, needed, needed.getCount(), times, gridCount);
-
+            ChestProxyMod.LOG.info("Extracting {}x {} for all slots combined", needTotal, itemName);
             int remaining = needTotal;
 
             for (int j = 0; j < player.inventory.getSizeInventory(); j++) {
                 if (remaining <= 0) break;
                 ItemStack invStack = player.inventory.getStackInSlot(j);
-                if (invStack.isEmpty() || !ChestHelper.canMerge(invStack, needed)) continue;
-
+                if (invStack.isEmpty() || !ChestHelper.canMerge(invStack, template)) continue;
                 int toTake = Math.min(invStack.getCount(), remaining);
                 invStack.splitStack(toTake);
                 if (invStack.isEmpty()) {
@@ -171,14 +203,23 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 }
                 remaining -= toTake;
             }
-
             if (remaining > 0) {
-                ChestHelper.extractFromChests(chests, needed, remaining);
+                ChestHelper.extractFromChests(chests, template, remaining);
             }
+        }
 
+        // Phase 2: Fill grid (no extraction)
+        for (int s = 0; s < CRAFTING_SLOTS; s++) {
+            container.craftMatrix.setInventorySlotContents(s, ItemStack.EMPTY);
+        }
+        for (int i = 0; i < CRAFTING_SLOTS; i++) {
+            ItemStack needed = inputs.get(i);
+            if (needed.isEmpty()) continue;
+            int gridCount = Math.min(needed.getCount() * times, 64);
             ItemStack gridStack = needed.copy();
             gridStack.setCount(gridCount);
             container.craftMatrix.setInventorySlotContents(i, gridStack);
+            ChestProxyMod.LOG.info("Slot {}: grid {}x", i, gridCount);
         }
 
         ItemStack result = CraftingManager.findMatchingResult(container.craftMatrix, world);
@@ -191,7 +232,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         }
         container.detectAndSendChanges();
 
-        // SSP: sync to server container
+        // SSP: sync to server container (per-type extraction, matching client logic)
         if (isRemote && server != null) {
             try {
                 EntityPlayerMP serverPlayer = server.getPlayerList().getPlayerByUUID(player.getUniqueID());
@@ -199,6 +240,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 if (serverPlayer != null) {
                     if (serverPlayer.openContainer instanceof ContainerWorkbench) {
                         ContainerWorkbench sc = (ContainerWorkbench) serverPlayer.openContainer;
+                        // Set grid on server
                         for (int s = 0; s < CRAFTING_SLOTS; s++) {
                             sc.craftMatrix.setInventorySlotContents(s, ItemStack.EMPTY);
                         }
@@ -213,14 +255,30 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                         if (!result.isEmpty()) {
                             sc.craftResult.setInventorySlotContents(0, result.copy());
                         }
+                        // Extract from server player inventory (per-type, matching client logic)
+                        Map<String, int[]> serverExtract = new HashMap<>();
                         for (int i = 0; i < CRAFTING_SLOTS; i++) {
-                            ItemStack needed = inputs.get(i);
-                            if (needed.isEmpty()) continue;
-                            int remaining = needed.getCount() * times;
+                            ItemStack srvNeeded = inputs.get(i);
+                            if (srvNeeded.isEmpty()) continue;
+                            String key = srvNeeded.getItem().getRegistryName() + "@" + srvNeeded.getItemDamage();
+                            int[] arr = serverExtract.get(key);
+                            if (arr == null) {
+                                arr = new int[]{0};
+                                serverExtract.put(key, arr);
+                            }
+                            arr[0] += srvNeeded.getCount() * times;
+                        }
+                        for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                            ItemStack srvNeeded = inputs.get(i);
+                            if (srvNeeded.isEmpty()) continue;
+                            String key = srvNeeded.getItem().getRegistryName() + "@" + srvNeeded.getItemDamage();
+                            int totalNeed = serverExtract.get(key)[0];
+                            if (totalNeed <= 0) continue;
+                            int remaining = totalNeed;
                             for (int j = 0; j < serverPlayer.inventory.getSizeInventory(); j++) {
                                 if (remaining <= 0) break;
                                 ItemStack invStack = serverPlayer.inventory.getStackInSlot(j);
-                                if (invStack.isEmpty() || !ChestHelper.canMerge(invStack, needed)) continue;
+                                if (invStack.isEmpty() || !ChestHelper.canMerge(invStack, srvNeeded)) continue;
                                 int toTake = Math.min(invStack.getCount(), remaining);
                                 invStack.splitStack(toTake);
                                 if (invStack.isEmpty()) {
@@ -228,6 +286,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                                 }
                                 remaining -= toTake;
                             }
+                            serverExtract.get(key)[0] = 0; // Mark as done
                         }
                         sc.detectAndSendChanges();
                         ChestProxyMod.LOG.info("  Server container synced OK");
