@@ -87,14 +87,15 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
         }
 
         if (!doTransfer) {
-            return validateItems(player, chests, inputs);
+            return validateItems(player, chests, inputs, maxTransfer);
         }
 
-        return performTransfer(container, player, world, server, chests, inputs, expectedOutput, isRemote);
+        return performTransfer(container, player, world, server, chests, inputs, expectedOutput, isRemote, maxTransfer);
     }
 
     @Nullable
-    private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs) {
+    private IRecipeTransferError validateItems(EntityPlayer player, List<IInventory> chests, List<ItemStack> inputs, boolean maxTransfer) {
+        int maxCrafts = maxTransfer ? Integer.MAX_VALUE : 1;
         List<Integer> missingSlots = new ArrayList<>();
         for (int i = 0; i < CRAFTING_SLOTS; i++) {
             ItemStack needed = inputs.get(i);
@@ -103,14 +104,20 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             int inInv = ChestHelper.countInInventory(player, needed);
             int inChests = ChestHelper.countInChests(chests, needed);
             int total = inInv + inChests;
+            int possible = total / needed.getCount();
 
-            ChestProxyMod.LOG.info("  Slot {} need {}x {} (inv={} chests={} total={})",
-                i, needed.getCount(), needed, inInv, inChests, total);
+            ChestProxyMod.LOG.info("  Slot {} need {}x {} (inv={} chests={} total={} possible={})",
+                i, needed.getCount(), needed, inInv, inChests, total, possible);
 
+            if (possible < maxCrafts) {
+                maxCrafts = possible;
+            }
             if (total < needed.getCount()) {
-                ChestProxyMod.LOG.info("  => Slot {} MISSING (need {} have {})", i, needed.getCount(), total);
                 missingSlots.add(i + 1);
             }
+        }
+        if (maxTransfer && maxCrafts > 0 && maxCrafts < Integer.MAX_VALUE) {
+            ChestProxyMod.LOG.info("  Can craft {}x", maxCrafts);
         }
         if (!missingSlots.isEmpty()) {
             return helper.createUserErrorForSlots("Missing items", missingSlots);
@@ -120,7 +127,22 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
     }
 
     @Nullable
-    private IRecipeTransferError performTransfer(ContainerWorkbench container, EntityPlayer player, World world, @Nullable MinecraftServer server, List<IInventory> chests, List<ItemStack> inputs, ItemStack expectedOutput, boolean isRemote) {
+    private IRecipeTransferError performTransfer(ContainerWorkbench container, EntityPlayer player, World world, @Nullable MinecraftServer server, List<IInventory> chests, List<ItemStack> inputs, ItemStack expectedOutput, boolean isRemote, boolean maxTransfer) {
+        // Calculate max crafts if shift is held
+        int times = 1;
+        if (maxTransfer) {
+            times = Integer.MAX_VALUE;
+            for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                ItemStack needed = inputs.get(i);
+                if (needed.isEmpty()) continue;
+                int inInv = ChestHelper.countInInventory(player, needed);
+                int inChests = ChestHelper.countInChests(chests, needed);
+                int possible = (inInv + inChests) / needed.getCount();
+                if (possible < times) times = possible;
+            }
+            ChestProxyMod.LOG.info("Max transfer: crafting {}x", times);
+        }
+
         // Fill client crafting grid
         for (int s = 0; s < CRAFTING_SLOTS; s++) {
             container.craftMatrix.setInventorySlotContents(s, ItemStack.EMPTY);
@@ -130,9 +152,12 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
             ItemStack needed = inputs.get(i);
             if (needed.isEmpty()) continue;
 
-            ChestProxyMod.LOG.info("Slot {}: need {}x {}", i, needed.getCount(), needed);
+            int needTotal = needed.getCount() * times;
+            int gridCount = Math.min(needTotal, 64);
 
-            int remaining = needed.getCount();
+            ChestProxyMod.LOG.info("Slot {}: need {}x {} ({}x{}) grid={}", i, needTotal, needed, needed.getCount(), times, gridCount);
+
+            int remaining = needTotal;
 
             for (int j = 0; j < player.inventory.getSizeInventory(); j++) {
                 if (remaining <= 0) break;
@@ -151,7 +176,9 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                 ChestHelper.extractFromChests(chests, needed, remaining);
             }
 
-            container.craftMatrix.setInventorySlotContents(i, needed.copy());
+            ItemStack gridStack = needed.copy();
+            gridStack.setCount(gridCount);
+            container.craftMatrix.setInventorySlotContents(i, gridStack);
         }
 
         ItemStack result = CraftingManager.findMatchingResult(container.craftMatrix, world);
@@ -173,8 +200,15 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                     if (serverPlayer.openContainer instanceof ContainerWorkbench) {
                         ContainerWorkbench sc = (ContainerWorkbench) serverPlayer.openContainer;
                         for (int s = 0; s < CRAFTING_SLOTS; s++) {
-                            ItemStack ps = container.craftMatrix.getStackInSlot(s);
-                            sc.craftMatrix.setInventorySlotContents(s, ps.isEmpty() ? ItemStack.EMPTY : ps.copy());
+                            sc.craftMatrix.setInventorySlotContents(s, ItemStack.EMPTY);
+                        }
+                        for (int i = 0; i < CRAFTING_SLOTS; i++) {
+                            ItemStack needed = inputs.get(i);
+                            if (needed.isEmpty()) continue;
+                            int gridCount = Math.min(needed.getCount() * times, 64);
+                            ItemStack gridStack = needed.copy();
+                            gridStack.setCount(gridCount);
+                            sc.craftMatrix.setInventorySlotContents(i, gridStack);
                         }
                         if (!result.isEmpty()) {
                             sc.craftResult.setInventorySlotContents(0, result.copy());
@@ -182,7 +216,7 @@ public class ChestCraftingTransferHandler implements IRecipeTransferHandler<Cont
                         for (int i = 0; i < CRAFTING_SLOTS; i++) {
                             ItemStack needed = inputs.get(i);
                             if (needed.isEmpty()) continue;
-                            int remaining = needed.getCount();
+                            int remaining = needed.getCount() * times;
                             for (int j = 0; j < serverPlayer.inventory.getSizeInventory(); j++) {
                                 if (remaining <= 0) break;
                                 ItemStack invStack = serverPlayer.inventory.getStackInSlot(j);
