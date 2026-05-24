@@ -79,7 +79,8 @@ public class ChestDepositButton {
         List<IInventory> chests = ChestHelper.findNearbyInventories(world, player.getPosition());
         ChestProxyMod.info("Deposit button: found {} chests", chests.size());
 
-        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+        // Skip hotbar (0-8), armor (36-39), offhand (40) — only main inventory (9-35)
+        for (int i = 9; i < 36; i++) {
             ItemStack stack = player.inventory.getStackInSlot(i);
             if (stack.isEmpty()) continue;
 
