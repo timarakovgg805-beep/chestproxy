@@ -27,6 +27,16 @@ public class ChestProxyConfig {
     @Config.LangKey("chestproxy.config.logging")
     public static boolean loggingEnabled = false;
 
+    @Config.Name("DepositSlotMin")
+    @Config.Comment("First inventory slot index to deposit (0-35, default 9 = skip hotbar)")
+    @Config.RangeInt(min = 0, max = 35)
+    public static int depositSlotMin = 9;
+
+    @Config.Name("DepositSlotMax")
+    @Config.Comment("Last inventory slot index to deposit (inclusive, 0-35, default 35 = all main inventory)")
+    @Config.RangeInt(min = 0, max = 35)
+    public static int depositSlotMax = 35;
+
     public static boolean isEnabled() {
         return enabled;
     }
