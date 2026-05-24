@@ -26,18 +26,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ChestCraftingTransferHandler implements IRecipeTransferHandler<ContainerWorkbench> {
+public class ChestCraftingTransferHandler<T extends ContainerWorkbench> implements IRecipeTransferHandler<T> {
 
     private static final int CRAFTING_SLOTS = 9;
     private final IRecipeTransferHandlerHelper helper;
+    private final Class<T> containerClass;
 
     public ChestCraftingTransferHandler(IRecipeTransferHandlerHelper helper) {
         this.helper = helper;
+        this.containerClass = (Class<T>) (Class<?>) ContainerWorkbench.class;
+    }
+
+    public ChestCraftingTransferHandler(IRecipeTransferHandlerHelper helper, Class<T> containerClass) {
+        this.helper = helper;
+        this.containerClass = containerClass;
     }
 
     @Override
-    public Class<ContainerWorkbench> getContainerClass() {
-        return ContainerWorkbench.class;
+    public Class<T> getContainerClass() {
+        return containerClass;
     }
 
     @Nullable

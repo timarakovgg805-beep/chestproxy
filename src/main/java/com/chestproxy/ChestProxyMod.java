@@ -17,7 +17,7 @@ import org.apache.logging.log4j.Logger;
     name = ChestProxyMod.MOD_NAME,
     version = ChestProxyMod.VERSION,
     acceptedMinecraftVersions = "[1.12.2,1.13)",
-    dependencies = "required-after:jei@[4.16.0,)",
+    dependencies = "required-after:jei@[4.16.0,);after:fastbench",
     clientSideOnly = true
 )
 public class ChestProxyMod {

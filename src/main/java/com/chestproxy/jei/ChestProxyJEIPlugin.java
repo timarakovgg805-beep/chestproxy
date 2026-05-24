@@ -9,6 +9,7 @@ import mezz.jei.api.JEIPlugin;
 import mezz.jei.api.recipe.VanillaRecipeCategoryUid;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import net.minecraft.inventory.ContainerWorkbench;
+import net.minecraftforge.fml.common.Loader;
 
 @JEIPlugin
 public class ChestProxyJEIPlugin implements IModPlugin {
@@ -24,6 +25,33 @@ public class ChestProxyJEIPlugin implements IModPlugin {
             VanillaRecipeCategoryUid.CRAFTING
         );
         ChestProxyMod.info("ChestCraftingTransferHandler registered for ContainerWorkbench + CRAFTING");
+
+        // Register for FastWorkbench containers to ensure chest-aware transfer is used
+        if (Loader.isModLoaded("fastbench")) {
+            try {
+                Class<?> fbClass = Class.forName("shadows.fastbench.gui.ContainerFastBench");
+                if (ContainerWorkbench.class.isAssignableFrom(fbClass)) {
+                    Class<? extends ContainerWorkbench> containerFB = fbClass.asSubclass(ContainerWorkbench.class);
+                    registry.getRecipeTransferRegistry().addRecipeTransferHandler(
+                        new ChestCraftingTransferHandler(transferHelper, containerFB),
+                        VanillaRecipeCategoryUid.CRAFTING
+                    );
+                    ChestProxyMod.info("Registered handler for FastWorkbench ContainerFastBench");
+                }
+            } catch (ClassNotFoundException ignored) {}
+
+            try {
+                Class<?> cfbClass = Class.forName("shadows.fastbench.gui.ClientContainerFastBench");
+                if (ContainerWorkbench.class.isAssignableFrom(cfbClass)) {
+                    Class<? extends ContainerWorkbench> clientCFB = cfbClass.asSubclass(ContainerWorkbench.class);
+                    registry.getRecipeTransferRegistry().addRecipeTransferHandler(
+                        new ChestCraftingTransferHandler(transferHelper, clientCFB),
+                        VanillaRecipeCategoryUid.CRAFTING
+                    );
+                    ChestProxyMod.info("Registered handler for FastWorkbench ClientContainerFastBench");
+                }
+            } catch (ClassNotFoundException ignored) {}
+        }
     }
 
     @Override
